@@ -2,17 +2,17 @@ package ticketingsystem;
 
 public class SegmentTree {
     private final int treeLeft, treeRight;
-    private final TreeNodeBase[] treeNode;
+    private final TreeNode[] treeNode;
     public static final int MIN = 0, SUM = 1;
     private final int combineMode;
 
     SegmentTree(int treeLeft, int treeRight, int initVal, int combineMode) {
         this.treeLeft = treeLeft;
         this.treeRight = treeRight;
-        this.treeNode = new TreeNodeBase[4 * (treeRight - treeLeft + 1) + 5];
+        this.treeNode = new TreeNode[4 * (treeRight - treeLeft + 1) + 5];
         this.combineMode = combineMode;
         for (int i = 0; i < 4 * (treeRight - treeLeft + 1) + 5; ++i) {
-            treeNode[i] = new TreeNodeBase(initVal, 0);
+            treeNode[i] = new TreeNode(initVal, 0);
         }
     }
 

@@ -1,5 +1,6 @@
 package ticketingsystem;
 
+import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
@@ -8,7 +9,7 @@ public class TicketingDS implements TicketingSystem {
     private final int routeNum, coachNum, seatNumPerCoach, stationNum, threadNum, seatNumPerGroup;
 
     private final SeatGroup[][] seatGroup;
-    private final ConcurrentHashMap<Long, Ticket> soldTickets = new ConcurrentHashMap<>();
+    private final ArrayList<ConcurrentHashMap<Long, Ticket>> soldTickets;
 
     public TicketingDS(int routeNum, int coachNum, int seatNumPerCoach, int stationNum, int threadNum) {
         // Verify parameters
@@ -27,13 +28,17 @@ public class TicketingDS implements TicketingSystem {
         // Init internal members
         int totalSeatNum = seatNumPerCoach * coachNum;
         int seatGroupNum = (totalSeatNum + seatNumPerGroup - 1) / seatNumPerGroup;
-        seatGroup = new SeatGroup[routeNum][seatGroupNum];
-        for (int r = 0; r < routeNum; ++r) {
+        seatGroup = new SeatGroup[routeNum + 1][seatGroupNum];
+        for (int r = 1; r <= routeNum; ++r) {
             for (int i = 0; i < seatGroupNum; ++i) {
                 int firstIndex = i * seatNumPerGroup;
                 int lastIndex = Math.min(firstIndex + seatNumPerGroup, totalSeatNum) - 1;
                 seatGroup[r][i] = new SeatGroup(firstIndex, lastIndex, stationNum);
             }
+        }
+        this.soldTickets = new ArrayList<>(routeNum + 1);
+        for (int i = 0; i <= routeNum; ++i) {
+            this.soldTickets.add(new ConcurrentHashMap<>());
         }
     }
 
@@ -63,7 +68,7 @@ public class TicketingDS implements TicketingSystem {
                 int coach = 1 + id / seatNumPerCoach;
                 int seat = 1 + id % seatNumPerCoach;
                 ticket = TicketSystemUtility.createTicket(tid, passenger, route, coach, seat, departure, arrival);
-                soldTickets.put(tid, ticket);
+                soldTickets.get(route).put(tid, ticket);
                 break;
             }
         }
@@ -90,7 +95,7 @@ public class TicketingDS implements TicketingSystem {
         if (ticket == null || invalidParameter(ticket.route, ticket.departure, ticket.arrival)) {
             throw new RuntimeException("Invalid refund parameter!");
         }
-        if (!soldTickets.containsKey(ticket.tid)) {
+        if (!soldTickets.get(ticket.route).containsKey(ticket.tid)) {
             // Refunding ticket not sold!
             return false;
         } else {
