@@ -1,22 +1,22 @@
 package ticketingsystem;
 
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.Objects;
 
-public class TicketSystemUtility {
+public class TicketUtility {
     public static Ticket createTicket(
             long tid,
             String passenger,
-            int route,
-            int coach,
-            int seat,
+            int routeId,
+            int coachId,
+            int seatId,
             int departure,
             int arrival) {
         Ticket ticket = new Ticket();
         ticket.tid = tid;
         ticket.passenger = passenger;
-        ticket.route = route;
-        ticket.coach = coach;
-        ticket.seat = seat;
+        ticket.route = routeId;
+        ticket.coach = coachId;
+        ticket.seat = seatId;
         ticket.departure = departure;
         ticket.arrival = arrival;
         return ticket;
@@ -36,22 +36,19 @@ public class TicketSystemUtility {
     }
 
     public static void printTicket(Ticket ticket) {
-        if (ticket == null) {
-            System.out.print("null\n");
-        } else {
-            System.out.format("{tid=%d, passenger=%s, route=%d, coach=%d, seat=%d, departure=%d, arrival=%d}\n",
-                    ticket.tid, ticket.passenger, ticket.route, ticket.coach,
-                    ticket.seat, ticket.departure, ticket.arrival);
-        }
+        printTicket(ticket, "");
     }
 
-    public static void randomShuffle(int[] arr) {
-        // https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle#The_modern_algorithm
-        for (int i = arr.length - 1; i > 0; --i) {
-            int j = ThreadLocalRandom.current().nextInt(i + 1);
-            int tmp = arr[i];
-            arr[i] = arr[j];
-            arr[j] = tmp;
+    public static void printTicket(Ticket ticket, String buyer) {
+        if (buyer.equals("")) {
+            buyer = "_";
+        }
+        if (ticket == null) {
+            System.out.format("Thread %d -- %s: null\n", Thread.currentThread().getId(), buyer);
+        } else {
+            System.out.format("Thread %d -- %s: {tid=%d, passenger=%s, route=%d, coach=%d, seat=%d, departure=%d, arrival=%d}\n",
+                    Thread.currentThread().getId(), buyer, ticket.tid, ticket.passenger, ticket.route, ticket.coach,
+                    ticket.seat, ticket.departure, ticket.arrival);
         }
     }
 }

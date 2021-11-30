@@ -82,7 +82,7 @@ public class NaiveTicketSystem implements TicketingSystem {
             }
             int coach = 1 + (remain - 1) / seatNumPerCoach;
             int seat = 1 + (remain - 1) % seatNumPerCoach;
-            ticket = TicketSystemUtility.createTicket(ticketId.getAndIncrement(), passenger, route, coach, seat, departure, arrival);
+            ticket = TicketUtility.createTicket(ticketId.getAndIncrement(), passenger, route, coach, seat, departure, arrival);
             registerSoldTicket(ticket);
         }
         for (int i = departure; i < arrival; ++i) {
@@ -112,12 +112,12 @@ public class NaiveTicketSystem implements TicketingSystem {
             Ticket soldTicket = querySoldTicket(ticket.route, ticket.tid);
             if (soldTicket == null) {
                 System.out.println("Cannot match any sold tickets!");
-                TicketSystemUtility.printTicket(ticket);
+                TicketUtility.printTicket(ticket);
                 success = false;
-            } else if (!TicketSystemUtility.isSameTicket(ticket, soldTicket, true)) {
+            } else if (!TicketUtility.isSameTicket(ticket, soldTicket, true)) {
                 System.out.println("Not the same with already sold ticket!");
-                TicketSystemUtility.printTicket(ticket);
-                TicketSystemUtility.printTicket(soldTicket);
+                TicketUtility.printTicket(ticket);
+                TicketUtility.printTicket(soldTicket);
                 success = false;
             } else {
                 for (int i = ticket.departure; i < ticket.arrival; ++i) {

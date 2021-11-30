@@ -16,13 +16,15 @@ public class Test {
         for (int i = 0; i < repeatTimes && flag; ++i) {
             int n = ThreadLocalRandom.current().nextInt(1000) + 5;
             int[] arr = IntStream.range(0, n).toArray();
-            int[] arr_cpy = new int[n];
-            System.arraycopy(arr, 0, arr_cpy, 0, n);
-            TicketSystemUtility.randomShuffle(arr);
+            int[] arr_shuffled = new int[n];
+            RandomTraverse order = new RandomTraverse(n);
+            for (int j = 0; j < n; ++j) {
+                arr_shuffled[j] = order.next();
+            }
             Arrays.sort(arr);
-            Arrays.sort(arr_cpy);
+            Arrays.sort(arr_shuffled);
             for (int j = 0; j < n && flag; ++j) {
-                if (arr[j] != arr_cpy[j]) {
+                if (arr[j] != arr_shuffled[j]) {
                     System.out.println("Error shuffle!");
                     flag = false;
                 }
@@ -30,51 +32,6 @@ public class Test {
         }
         if (flag) {
             System.out.println("Correct shuffle!\n");
-        }
-    }
-
-    private static void testSegmentTree() {
-        int repeatTimes = 1000;
-        int segLength = 20;
-        int initVal = 10;
-        Random random = new Random();
-        boolean flag = true;
-        for (int rd = 0; rd < repeatTimes && flag; ++rd) {
-            SegmentTree seg = new SegmentTree(1, segLength, initVal);
-            int[] arr = new int[segLength + 1];
-            for (int i = 1; i <= segLength; ++i) {
-                arr[i] = initVal;
-            }
-            int opNum = 1000;
-            for (int op = 0; op < opNum; ++op) {
-                int x = random.nextInt(segLength) + 1;
-                int y = random.nextInt(segLength) + 1;
-                if (x > y) {
-                    int tmp = x;
-                    x = y;
-                    y = tmp;
-                }
-                int v = -10 + random.nextInt(2 * 10);
-                seg.update(x, y, v);
-                for (int i = x; i <= y; ++i) {
-                    arr[i] += v;
-                }
-            }
-            for (int i = 1; i <= segLength; ++i) {
-                for (int j = i; j <= segLength; ++j) {
-                    int seg_res = seg.query(i, j);
-                    int arr_res = Integer.MAX_VALUE;
-                    for (int k = i; k <= j; ++k) {
-                        arr_res = Math.min(arr_res, arr[k]);
-                    }
-                    if (seg_res != arr_res) {
-                        flag = false;
-                    }
-                }
-            }
-        }
-        if (flag) {
-            System.out.println("Correct SegmentTree!\n");
         }
     }
 
@@ -125,8 +82,10 @@ public class Test {
                         System.out.format("Thread %d -- Error when testing at %d\n", threadId, testRound);
                         System.out.format("Thread %d -- Buy: passenger=%s, route=%d, departure=%d, arrival=%d\n",
                                 threadId, passengerName, route, departure, arrival);
-                        TicketSystemUtility.printTicket(ticketA);
-                        TicketSystemUtility.printTicket(ticketB);
+                        TicketUtility.printTicket(ticketA, "A");
+                        TicketUtility.printTicket(ticketB, "B");
+                        System.out.format("Thread %d -- A remain: %d, B remain: %d\n",
+                                threadId, systemA.inquiry(route, departure, arrival), systemB.inquiry(route, departure, arrival));
                     }
                     break;
                 case REFUND:
@@ -148,8 +107,8 @@ public class Test {
                                     threadId,
                                     systemA.inquiry(ticketABought.route, ticketABought.departure, ticketABought.arrival),
                                     systemB.inquiry(ticketBBought.route, ticketBBought.departure, ticketBBought.arrival));
-                            TicketSystemUtility.printTicket(ticketABought);
-                            TicketSystemUtility.printTicket(ticketBBought);
+                            TicketUtility.printTicket(ticketABought);
+                            TicketUtility.printTicket(ticketBBought);
                         }
                     }
                     break;
@@ -162,30 +121,11 @@ public class Test {
                         System.out.format("Thread %d -- Query: route=%d, departure=%d, arrival=%d\n",
                                 threadId, route, departure, arrival);
                         System.out.format("Thread %d -- A: %d, B: %d\n", threadId, aResult, bResult);
-//                        for (int i = departure; i < arrival; ++i) {
-//                            int x = systemA.inquiry(route, i, i + 1);
-//                            int y = systemB.inquiry(route, i, i + 1);
-//                            System.out.format("%d - %d, A: %d, B: %d\n", i, i + 1, x, y);
-//                        }
                     }
                     break;
                 default: // Impossible
                     break;
             }
-            // Check all internal intervals
-//            for (int i = 1; i < stationNum && flag; ++i) {
-//                for (int j = i + 1; j < stationNum && flag; ++j) {
-//                    int x = systemA.inquiry(route, i, j);
-//                    int y = systemB.inquiry(route, i, j);
-//                    if (x != y) {
-////                        System.out.format("Thread %d -- Error when testing at %d\n", threadId, testRound);
-//                        System.out.format("Error pos: %d - %d, A: %d, B: %d (route: %d, round: %d)\n",
-//                                i, j, x, y, route, testRound);
-//                        System.out.println("Operation: " + opType);
-//                        flag = false;
-//                    }
-//                }
-//            }
         }
         return flag;
     }
@@ -338,10 +278,9 @@ public class Test {
 
     public static void main(String[] args) throws InterruptedException {
         testShuffleUtility();
-        testSegmentTree();
 
         int routeNum = 10, coachNum = 10, seatNum = 100, stationNum = 20, threadNum = 6;
         testSequential(routeNum, coachNum, seatNum, stationNum, threadNum);
-//        testConcurrent(routeNum, coachNum, seatNum, stationNum, threadNum);
+        testConcurrent(routeNum, coachNum, seatNum, stationNum, threadNum);
     }
 }
