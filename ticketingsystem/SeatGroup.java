@@ -5,9 +5,12 @@ public class SeatGroup {
     private final SegmentTree seats;
 
     public SeatGroup(int firstTicketId, int lastTicketId, int stationNum) {
+        if (lastTicketId < firstTicketId) {
+            throw new RuntimeException("Invalid construction of SeatGroup!");
+        }
         this.firstTicketId = firstTicketId;
         this.size = lastTicketId - firstTicketId + 1;
-        seats = new SegmentTree(1, stationNum, size, SegmentTree.MIN);
+        seats = new SegmentTree(1, stationNum, size);
     }
 
     /*
@@ -22,6 +25,7 @@ public class SeatGroup {
             return -1;
         } else {
             seats.update(departure, arrival, -1);
+//            System.out.format("Updated interval from %d to %d\n", departure, arrival);
             return firstTicketId + remain - 1;
         }
     }
@@ -37,7 +41,7 @@ public class SeatGroup {
     /*
      * Return the remaining slot within interval.
      * */
-    synchronized int query(int departure, int arrival) {
-        return seats.query(departure, arrival);
+    synchronized int[] splitQuery(int departure, int arrival) {
+        return seats.splitQuery(departure, arrival);
     }
 }

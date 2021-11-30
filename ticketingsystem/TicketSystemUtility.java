@@ -54,11 +54,5 @@ public class TicketSystemUtility {
             arr[j] = tmp;
         }
     }
-
-//    public static void printTicketSystem(TicketSystemBase system) {
-//        System.out.println("System Info:");
-//        System.out.format("routeNum: %d, stationNum: %d, coachNum: %d, seatNum: %d\n",
-//                system.routeNum, system.stationNum, system.coachNum, system.seatNum);
-//    }
 }
 

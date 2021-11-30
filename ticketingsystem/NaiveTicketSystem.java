@@ -11,7 +11,7 @@ public class NaiveTicketSystem implements TicketingSystem {
     private final int routeCapacity;
     private final int[][] routeTicketCount;
     ReentrantLock[][] routeLock;
-    private final ArrayList<ConcurrentHashMap<Long, Ticket>> soldTickets;
+    public final ArrayList<ConcurrentHashMap<Long, Ticket>> soldTickets;
 
     public NaiveTicketSystem(int routeNum, int coachNum, int seatNum, int stationNum, int threadNum) {
         this.routeNum = routeNum;
@@ -69,7 +69,7 @@ public class NaiveTicketSystem implements TicketingSystem {
             System.out.println("Trying to buy an invalid ticket!");
             return null;
         }
-        for (int i = departure; i <= arrival; ++i) {
+        for (int i = departure; i < arrival; ++i) {
             routeLock[route][i].lock();
         }
         Ticket ticket;
@@ -77,15 +77,15 @@ public class NaiveTicketSystem implements TicketingSystem {
         if (remain == 0) {
             ticket = null;
         } else {
-            for (int i = departure; i <= arrival; ++i) {
+            for (int i = departure; i < arrival; ++i) {
                 routeTicketCount[route][i]--;
             }
             int coach = 1 + (remain - 1) / seatNumPerCoach;
-            int seat = 1 + remain % seatNumPerCoach;
+            int seat = 1 + (remain - 1) % seatNumPerCoach;
             ticket = TicketSystemUtility.createTicket(ticketId.getAndIncrement(), passenger, route, coach, seat, departure, arrival);
             registerSoldTicket(ticket);
         }
-        for (int i = departure; i <= arrival; ++i) {
+        for (int i = departure; i < arrival; ++i) {
             routeLock[route][i].unlock();
         }
         return ticket;
@@ -96,7 +96,7 @@ public class NaiveTicketSystem implements TicketingSystem {
         // We allow inquiry has inaccurate results
         // So we do not lock while inquiring
         int remain = routeCapacity + 1;
-        for (int i = departure; i <= arrival; ++i) {
+        for (int i = departure; i < arrival; ++i) {
             remain = Math.min(remain, routeTicketCount[route][i]);
         }
         return remain;
@@ -105,7 +105,7 @@ public class NaiveTicketSystem implements TicketingSystem {
     @Override
     public boolean refundTicket(Ticket ticket) {
         if (isValidTicket(ticket)) {
-            for (int i = ticket.departure; i <= ticket.arrival; ++i) {
+            for (int i = ticket.departure; i < ticket.arrival; ++i) {
                 routeLock[ticket.route][i].lock();
             }
             boolean success;
@@ -120,14 +120,14 @@ public class NaiveTicketSystem implements TicketingSystem {
                 TicketSystemUtility.printTicket(soldTicket);
                 success = false;
             } else {
-                for (int i = ticket.departure; i <= ticket.arrival; ++i) {
+                for (int i = ticket.departure; i < ticket.arrival; ++i) {
                     routeTicketCount[ticket.route][i]++;
                 }
                 removeSoldTicket(ticket.route, ticket.tid);
                 success = true;
             }
 
-            for (int i = ticket.departure; i <= ticket.arrival; ++i) {
+            for (int i = ticket.departure; i < ticket.arrival; ++i) {
                 routeLock[ticket.route][i].unlock();
             }
             return success;

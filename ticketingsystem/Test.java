@@ -1,19 +1,86 @@
 package ticketingsystem;
 
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Random;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
+import java.util.stream.IntStream;
 
 public class Test {
 
     protected static final int BUY = 0, REFUND = 1, QUERY = 2;
 
-    private static int getRandomOpType(Random random) {
+    private static void testShuffleUtility() {
+        int repeatTimes = 1000;
+        boolean flag = true;
+        for (int i = 0; i < repeatTimes && flag; ++i) {
+            int n = ThreadLocalRandom.current().nextInt(1000) + 5;
+            int[] arr = IntStream.range(0, n).toArray();
+            int[] arr_cpy = new int[n];
+            System.arraycopy(arr, 0, arr_cpy, 0, n);
+            TicketSystemUtility.randomShuffle(arr);
+            Arrays.sort(arr);
+            Arrays.sort(arr_cpy);
+            for (int j = 0; j < n && flag; ++j) {
+                if (arr[j] != arr_cpy[j]) {
+                    System.out.println("Error shuffle!");
+                    flag = false;
+                }
+            }
+        }
+        if (flag) {
+            System.out.println("Correct shuffle!\n");
+        }
+    }
+
+    private static void testSegmentTree() {
+        int repeatTimes = 1000;
+        int segLength = 20;
+        int initVal = 10;
+        Random random = new Random();
+        boolean flag = true;
+        for (int rd = 0; rd < repeatTimes && flag; ++rd) {
+            SegmentTree seg = new SegmentTree(1, segLength, initVal);
+            int[] arr = new int[segLength + 1];
+            for (int i = 1; i <= segLength; ++i) {
+                arr[i] = initVal;
+            }
+            int opNum = 1000;
+            for (int op = 0; op < opNum; ++op) {
+                int x = random.nextInt(segLength) + 1;
+                int y = random.nextInt(segLength) + 1;
+                if (x > y) {
+                    int tmp = x;
+                    x = y;
+                    y = tmp;
+                }
+                int v = -10 + random.nextInt(2 * 10);
+                seg.update(x, y, v);
+                for (int i = x; i <= y; ++i) {
+                    arr[i] += v;
+                }
+            }
+            for (int i = 1; i <= segLength; ++i) {
+                for (int j = i; j <= segLength; ++j) {
+                    int seg_res = seg.query(i, j);
+                    int arr_res = Integer.MAX_VALUE;
+                    for (int k = i; k <= j; ++k) {
+                        arr_res = Math.min(arr_res, arr[k]);
+                    }
+                    if (seg_res != arr_res) {
+                        flag = false;
+                    }
+                }
+            }
+        }
+        if (flag) {
+            System.out.println("Correct SegmentTree!\n");
+        }
+    }
+
+    private static int getRandomOpType() {
         int opType;
-        int rV = random.nextInt(100);
+        int rV = ThreadLocalRandom.current().nextInt(100);
         if (rV < 20) {
             opType = BUY;
         } else if (rV < 20 + 10) {
@@ -31,8 +98,8 @@ public class Test {
         boolean flag = true;
         long threadId = Thread.currentThread().getId();
         LinkedList<Ticket> aBought = new LinkedList<>(), bBought = new LinkedList<>();
-        for (int i = 0; i < repeatTimes && (flag); ++i) {
-            int opType = getRandomOpType(random);
+        for (int testRound = 0; testRound < repeatTimes && (flag); ++testRound) {
+            int opType = getRandomOpType();
             String passengerName = "TEST_USER";
             int route = random.nextInt(routeNum) + 1;
             int departure = random.nextInt(stationNum) + 1;
@@ -55,7 +122,7 @@ public class Test {
                         bBought.add(ticketB);
                     }
                     if (!flag) {
-                        System.out.format("Thread %d -- Error when testing at %d\n", threadId, i);
+                        System.out.format("Thread %d -- Error when testing at %d\n", threadId, testRound);
                         System.out.format("Thread %d -- Buy: passenger=%s, route=%d, departure=%d, arrival=%d\n",
                                 threadId, passengerName, route, departure, arrival);
                         TicketSystemUtility.printTicket(ticketA);
@@ -73,7 +140,7 @@ public class Test {
                         bBought.remove(ind);
                         flag = (aSuccess == bSuccess);
                         if (!flag) {
-                            System.out.format("Thread %d -- Error when testing at %d\n", threadId, i);
+                            System.out.format("Thread %d -- Error when testing at %d\n", threadId, testRound);
                             System.out.format("Thread %d -- Refund:\n", threadId);
                             System.out.format("Thread %d -- A: %b, B: %b\n", threadId, aSuccess, bSuccess);
                             System.out.format("Thread %d -- Query for now:\n", threadId);
@@ -91,15 +158,34 @@ public class Test {
                     int bResult = systemB.inquiry(route, departure, arrival);
                     flag = (aResult == bResult) || ignoreError;
                     if (!flag) {
-                        System.out.format("Thread %d -- Error when testing at %d\n", threadId, i);
+                        System.out.format("Thread %d -- Error when testing at %d\n", threadId, testRound);
                         System.out.format("Thread %d -- Query: route=%d, departure=%d, arrival=%d\n",
                                 threadId, route, departure, arrival);
                         System.out.format("Thread %d -- A: %d, B: %d\n", threadId, aResult, bResult);
+//                        for (int i = departure; i < arrival; ++i) {
+//                            int x = systemA.inquiry(route, i, i + 1);
+//                            int y = systemB.inquiry(route, i, i + 1);
+//                            System.out.format("%d - %d, A: %d, B: %d\n", i, i + 1, x, y);
+//                        }
                     }
                     break;
                 default: // Impossible
                     break;
             }
+            // Check all internal intervals
+//            for (int i = 1; i < stationNum && flag; ++i) {
+//                for (int j = i + 1; j < stationNum && flag; ++j) {
+//                    int x = systemA.inquiry(route, i, j);
+//                    int y = systemB.inquiry(route, i, j);
+//                    if (x != y) {
+////                        System.out.format("Thread %d -- Error when testing at %d\n", threadId, testRound);
+//                        System.out.format("Error pos: %d - %d, A: %d, B: %d (route: %d, round: %d)\n",
+//                                i, j, x, y, route, testRound);
+//                        System.out.println("Operation: " + opType);
+//                        flag = false;
+//                    }
+//                }
+//            }
         }
         return flag;
     }
@@ -108,7 +194,7 @@ public class Test {
         Random random = new Random();
         LinkedList<Ticket> boughtTickets = new LinkedList<>();
         for (int i = 0; i < checkTimes; ++i) {
-            int opType = getRandomOpType(random);
+            int opType = getRandomOpType();
             String passengerName = "PERF_USER";
             int route = random.nextInt(routeNum) + 1;
             int departure = random.nextInt(stationNum) + 1;
@@ -251,6 +337,9 @@ public class Test {
     }
 
     public static void main(String[] args) throws InterruptedException {
+        testShuffleUtility();
+        testSegmentTree();
+
         int routeNum = 10, coachNum = 10, seatNum = 100, stationNum = 20, threadNum = 6;
         testSequential(routeNum, coachNum, seatNum, stationNum, threadNum);
 //        testConcurrent(routeNum, coachNum, seatNum, stationNum, threadNum);

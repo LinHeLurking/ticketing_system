@@ -1,16 +1,15 @@
 package ticketingsystem;
 
+import java.util.ArrayList;
+
 public class SegmentTree {
     private final int treeLeft, treeRight;
     private final TreeNode[] treeNode;
-    public static final int MIN = 0, SUM = 1;
-    private final int combineMode;
 
-    SegmentTree(int treeLeft, int treeRight, int initVal, int combineMode) {
+    SegmentTree(int treeLeft, int treeRight, int initVal) {
         this.treeLeft = treeLeft;
         this.treeRight = treeRight;
         this.treeNode = new TreeNode[4 * (treeRight - treeLeft + 1) + 5];
-        this.combineMode = combineMode;
         for (int i = 0; i < 4 * (treeRight - treeLeft + 1) + 5; ++i) {
             treeNode[i] = new TreeNode(initVal, 0);
         }
@@ -19,21 +18,37 @@ public class SegmentTree {
     private void pushDown(int root) {
         if (treeNode[root].lazyUpdate != 0) {
             int offset = treeNode[root].lazyUpdate;
-            treeNode[root].lazyUpdate = 0;
             treeNode[root << 1].lazyUpdate += offset;
             treeNode[root << 1 | 1].lazyUpdate += offset;
-            int treeMid = (treeLeft + treeRight) >> 1;
-            if (combineMode == MIN) {
-                treeNode[root << 1].value += offset;
-                treeNode[root << 1 | 1].value += offset;
-            } else if (combineMode == SUM) {
-                treeNode[root << 1].value += offset * (treeMid - treeLeft + 1);
-                treeNode[root << 1 | 1].value += offset * (treeRight - treeMid);
-            }
+            treeNode[root << 1].value += offset;
+            treeNode[root << 1 | 1].value += offset;
+            treeNode[root].lazyUpdate = 0;
         }
     }
 
-    
+    public int[] splitQuery(int segLeft, int segRight) {
+        ArrayList<Integer> result = new ArrayList<>();
+        splitQuery(1, treeLeft, treeRight, segLeft, segRight, result);
+        int[] ret = new int[result.size()];
+        for (int i = 0; i < result.size(); ++i) {
+            ret[i] = result.get(i);
+        }
+        return ret;
+    }
+
+    private void splitQuery(int root, int nodeLeft, int nodeRight, int segLeft, int segRight, ArrayList<Integer> result) {
+        if (segLeft > segRight || segLeft > nodeRight || segRight < nodeLeft) {
+            return;
+        } else if (segLeft == nodeLeft && segRight == nodeRight && nodeRight == nodeLeft) {
+            result.add(treeNode[root].value);
+        } else {
+            pushDown(root);
+            int nodeMid = (nodeLeft + nodeRight) >> 1;
+            splitQuery(root << 1, nodeLeft, nodeMid, segLeft, Math.min(segRight, nodeMid), result);
+            splitQuery(root << 1 | 1, nodeMid + 1, nodeRight, Math.max(segLeft, nodeMid + 1), segRight, result);
+        }
+    }
+
     public int query(int segLeft, int segRight) {
         return query(1, treeLeft, treeRight, segLeft, segRight);
     }
@@ -48,17 +63,11 @@ public class SegmentTree {
             int nodeMid = (nodeLeft + nodeRight) >> 1;
             int l = query(root << 1, nodeLeft, nodeMid, segLeft, Math.min(segRight, nodeMid));
             int r = query(root << 1 | 1, nodeMid + 1, nodeRight, Math.max(segLeft, nodeMid + 1), segRight);
-            if (combineMode == MIN) {
-                return Math.min(l, r);
-            } else if (combineMode == SUM) {
-                return l + r;
-            } else {
-                return -1; // Impossible
-            }
+            return Math.min(l, r);
         }
     }
 
-    
+
     public int update(int segLeft, int segRight, int offset) {
         return update(1, treeLeft, treeRight, segLeft, segRight, offset);
     }
@@ -75,24 +84,9 @@ public class SegmentTree {
             int nodeMid = (nodeLeft + nodeRight) >> 1;
             update(root << 1, nodeLeft, nodeMid, segLeft, Math.min(segRight, nodeMid), offset);
             update(root << 1 | 1, nodeMid + 1, nodeRight, Math.max(segLeft, nodeMid + 1), segRight, offset);
-            int ret;
-            if (combineMode == MIN) {
-                treeNode[root].value = Math.min(treeNode[root << 1].value, treeNode[root << 1 | 1].value);
-            } else if (combineMode == SUM) {
-                treeNode[root].value = treeNode[root << 1].value + treeNode[root << 1 | 1].value;
-            }
-            ret = treeNode[root].value;
-            return ret;
+            treeNode[root].value = Math.min(treeNode[root << 1].value, treeNode[root << 1 | 1].value);
+            return treeNode[root].value;
         }
-    }
-
-    
-    public int boundedUpdate(int segLeft, int segRight, int offset) {
-        int val = update(1, treeLeft, treeRight, segLeft, segRight, offset);
-        if (val < 0) {
-            update(1, treeLeft, treeRight, segLeft, segRight, -offset);
-        }
-        return val;
     }
 }
 

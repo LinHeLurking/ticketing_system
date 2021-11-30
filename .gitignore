@@ -5,3 +5,4 @@ history
 VeriLinS.jar
 out
 build
+*.class
