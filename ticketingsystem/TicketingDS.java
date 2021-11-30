@@ -106,13 +106,12 @@ public class TicketingDS implements TicketingSystem {
                 TicketUtility.printTicket(ticket);
                 TicketUtility.printTicket(soldTicket);
             } else {
-                soldTickets[soldTicket.route].remove(soldTicket.tid);
-                for (int s = 0; s < routeCapacity; ++s) {
-                    if (seatStatus[ticket.route][s].tryFree(ticket.departure, ticket.arrival)) {
-                        return true;
-                    }
+                int s = (soldTicket.coach - 1) * seatNumPerCoach + (soldTicket.seat - 1);
+                if (!seatStatus[soldTicket.route][s].tryFree(soldTicket.departure, soldTicket.arrival)) {
+                    return false;
                 }
-                return false;
+                soldTickets[soldTicket.route].remove(soldTicket.tid);
+                return true;
             }
         }
         return false;

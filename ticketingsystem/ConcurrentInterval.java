@@ -40,4 +40,9 @@ public class ConcurrentInterval {
         long mask = ((1L << endExclusive) - 1) ^ ((1L << beginInclusive) - 1);
         return (bitmap & mask) == 0;
     }
+
+    public boolean isAllOccupied(int beginInclusive, int endExclusive) {
+        long mask = ((1L << endExclusive) - 1) ^ ((1L << beginInclusive) - 1);
+        return (bitmap & mask) == mask;
+    }
 }
