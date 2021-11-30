@@ -188,7 +188,7 @@ public class Test {
         final LinkedList<TicketingSystem> systems = new LinkedList<>();
         systems.add(new TicketingDS(routeNum, coachNum, seatNum, stationNum, threadNum));
 
-        int checkTimes = 10000;
+        int checkTimes = 100000;
         boolean concurrentResult;
         for (TicketingSystem system : systems) {
             naiveDS = new NaiveTicketSystem(routeNum, coachNum, seatNum, stationNum, threadNum);
