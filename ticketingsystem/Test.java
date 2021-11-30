@@ -1,14 +1,41 @@
 package ticketingsystem;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 public class Test {
 
     protected static final int BUY = 0, REFUND = 1, QUERY = 2;
+
+    private static void testRandomTraverse() {
+        int repeatTimes = 10000;
+        boolean flag = true;
+        for (int rd = 0; rd < repeatTimes && flag; ++rd) {
+            int n = ThreadLocalRandom.current().nextInt(1000);
+            ArrayList<Integer> arr = new ArrayList<>();
+            RandomTraverse order = new RandomTraverse(n);
+            for (int i = 0; i < n; ++i) {
+                arr.add(order.next());
+            }
+            Collections.sort(arr);
+
+            for (int i = 0; i < n && flag; ++i) {
+                flag = (i == arr.get(i));
+            }
+
+        }
+        if (flag) {
+            System.out.println("Correct random traverse!\n");
+        } else {
+            System.out.println("Incorrect random traverse!\n");
+        }
+    }
 
     private static int getRandomOpType(Random random) {
         int opType;
@@ -47,17 +74,29 @@ public class Test {
                 case BUY:
                     Ticket ticketA = systemA.buyTicket(passengerName, route, departure, arrival);
                     Ticket ticketB = systemB.buyTicket(passengerName, route, departure, arrival);
-                    flag = (ticketA == null && ticketB == null) || (ticketA != null && ticketB != null);
                     if (ticketA != null && ticketB != null) {
                         aBought.add(ticketA);
                         bBought.add(ticketB);
+                    } else if (ignoreError) {
+                        // In concurrent situation, the last ticket might be bought by another thread.
+                        // Just keep current thread doing the same to 2 systems.
+                        if (ticketA == null && ticketB != null) {
+                            systemB.refundTicket(ticketB);
+                            ticketB = null;
+                        } else if (ticketA != null && ticketB == null) {
+                            systemA.refundTicket(ticketA);
+                            ticketA = null;
+                        }
                     }
+                    flag = (ticketA == null && ticketB == null) || (ticketA != null && ticketB != null);
                     if (!flag) {
                         System.out.format("Thread %d -- Error when testing at %d\n", threadId, i);
                         System.out.format("Thread %d -- Buy: passenger=%s, route=%d, departure=%d, arrival=%d\n",
                                 threadId, passengerName, route, departure, arrival);
-                        TicketUtility.printTicket(ticketA);
-                        TicketUtility.printTicket(ticketB);
+                        TicketUtility.printTicket(ticketA, "A");
+                        TicketUtility.printTicket(ticketB, "B");
+                        System.out.format("Thread %d -- Inquiring remaining tickets now. A: %d, B: %d\n",
+                                threadId, systemA.inquiry(route, departure, arrival), systemB.inquiry(route, departure, arrival));
                     }
                     break;
                 case REFUND:
@@ -106,8 +145,8 @@ public class Test {
                                                          int threadNum, int routeNum, int stationNum)
             throws InterruptedException {
         System.out.println("Testing concurrent correctness...");
-        System.out.format("A=%s\n", systemA.getClass().getSimpleName());
-        System.out.format("B=%s\n", systemB.getClass().getSimpleName());
+        System.out.format("A = %s\n", systemA.getClass().getSimpleName());
+        System.out.format("B = %s\n", systemB.getClass().getSimpleName());
 
         ExecutorService executor = Executors.newCachedThreadPool();
         for (int i = 0; i < threadNum; ++i) {
@@ -140,8 +179,8 @@ public class Test {
     private static boolean compareTicketSystemSequential(TicketingSystem systemA, TicketingSystem systemB,
                                                          int checkTimes, int routeNum, int stationNum) {
         System.out.println("Testing sequential correctness...");
-        System.out.format("A=%s\n", systemA.getClass().getSimpleName());
-        System.out.format("B=%s\n", systemB.getClass().getSimpleName());
+        System.out.format("A = %s\n", systemA.getClass().getSimpleName());
+        System.out.format("B = %s\n", systemB.getClass().getSimpleName());
 
         boolean flag = singleThreadTest(systemA, systemB, checkTimes, routeNum, stationNum, false);
         System.out.println("Inquiry results after sequential tests...");
@@ -165,7 +204,7 @@ public class Test {
         final LinkedList<TicketingSystem> systems = new LinkedList<>();
         systems.add(new TicketingDS(routeNum, coachNum, seatNum, stationNum, threadNum));
 
-        int checkTimes = 10000;
+        int checkTimes = 100000;
         boolean sequentialResult;
         for (TicketingSystem system : systems) {
             naiveDS = new NaiveTicketSystem(routeNum, coachNum, seatNum, stationNum, threadNum);
@@ -206,6 +245,8 @@ public class Test {
     }
 
     public static void main(String[] args) throws InterruptedException {
+        testRandomTraverse();
+
         int routeNum = 10, coachNum = 10, seatNum = 100, stationNum = 20, threadNum = 6;
         testSequential(routeNum, coachNum, seatNum, stationNum, threadNum);
         testConcurrent(routeNum, coachNum, seatNum, stationNum, threadNum);
