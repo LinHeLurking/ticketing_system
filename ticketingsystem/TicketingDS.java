@@ -1,14 +1,15 @@
 package ticketingsystem;
 
-import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class TicketingDS implements TicketingSystem {
     private final int routeNum, coachNum, seatNumPerCoach, stationNum, threadNum, routeCapacity;
 
-    private final ConcurrentHashMap<Integer, ConcurrentHashMap<Long, Ticket>> soldTickets;
-    private final ConcurrentInterval[] routeStatus;
+    private final ConcurrentHashMap<Long, Ticket>[] soldTickets;
+    private final ConcurrentInterval[][] seatStatus;
+    private final AtomicLong[] ticketIdCounter;
 
     public TicketingDS(int routeNum, int coachNum, int seatNumPerCoach, int stationNum, int threadNum) {
         // Verify parameters
@@ -25,14 +26,22 @@ public class TicketingDS implements TicketingSystem {
         this.routeCapacity = coachNum * seatNumPerCoach;
 
         // Init internal members
-        this.soldTickets = new ConcurrentHashMap<>(routeNum + 1);
+        this.soldTickets = new ConcurrentHashMap[routeNum + 1];
         for (int i = 0; i <= routeNum; ++i) {
-            this.soldTickets.put(i, new ConcurrentHashMap<>());
+            this.soldTickets[i] = new ConcurrentHashMap<>();
         }
 
-        routeStatus = new ConcurrentInterval[routeNum + 1];
+        ticketIdCounter = new AtomicLong[routeNum + 1];
         for (int r = 1; r <= routeNum; ++r) {
-            routeStatus[r] = new ConcurrentInterval(stationNum + 1, routeCapacity);
+            ticketIdCounter[r] = new AtomicLong(r);
+        }
+
+        seatStatus = new ConcurrentInterval[routeNum + 1][];
+        for (int r = 1; r <= routeNum; ++r) {
+            seatStatus[r] = new ConcurrentInterval[routeCapacity];
+            for (int s = 0; s < routeCapacity; ++s) {
+                seatStatus[r][s] = new ConcurrentInterval(stationNum + 1);
+            }
         }
     }
 
@@ -43,8 +52,8 @@ public class TicketingDS implements TicketingSystem {
                 departure >= arrival;
     }
 
-    private long getUniqueTicketId(int route, int departure, int arrival) {
-        return System.nanoTime() ^ ThreadLocalRandom.current().nextLong() ^ route ^ departure ^ arrival;
+    private long getUniqueTicketId(int route) {
+        return ticketIdCounter[route].getAndAdd(routeNum);
     }
 
 //    public ArrayList<Integer> reservedSeats()
@@ -54,17 +63,17 @@ public class TicketingDS implements TicketingSystem {
         if (invalidParameter(route, departure, arrival)) {
             throw new RuntimeException("Invalid purchase parameter!");
         }
-        int prior = routeStatus[route].tryReserve(departure, arrival);
-        if (prior == 0) {
-            return null;
-        } else {
-            int coach = 1 + (prior - 1) / seatNumPerCoach;
-            int seat = 1 + (prior - 1) % seatNumPerCoach;
-            long tid = getUniqueTicketId(route, departure, arrival);
-            Ticket ticket = TicketUtility.createTicket(tid, passenger, route, coach, seat, departure, arrival);
-            soldTickets.get(route).put(tid, ticket);
-            return ticket;
+        for (int s = 0; s < routeCapacity; ++s) {
+            if (seatStatus[route][s].tryReserve(departure, arrival)) {
+                long tid = getUniqueTicketId(route);
+                int coachId = 1 + s / seatNumPerCoach;
+                int seatId = 1 + s % seatNumPerCoach;
+                Ticket ticket = TicketUtility.createTicket(tid, passenger, route, coachId, seatId, departure, arrival);
+                soldTickets[route].put(tid, ticket);
+                return ticket;
+            }
         }
+        return null;
     }
 
     @Override
@@ -73,7 +82,13 @@ public class TicketingDS implements TicketingSystem {
         if (invalidParameter(route, departure, arrival)) {
             throw new RuntimeException("Invalid inquiry parameter!");
         }
-        return routeStatus[route].countAvailable(departure, arrival);
+        int remain = 0;
+        for (int s = 0; s < routeCapacity; ++s) {
+            if (seatStatus[route][s].isAvailable(departure, arrival)) {
+                remain++;
+            }
+        }
+        return remain;
     }
 
     @Override
@@ -81,8 +96,8 @@ public class TicketingDS implements TicketingSystem {
         if (ticket == null || invalidParameter(ticket.route, ticket.departure, ticket.arrival)) {
             throw new RuntimeException("Invalid refund parameter!");
         }
-        if (soldTickets.get(ticket.route).containsKey(ticket.tid)) {
-            Ticket soldTicket = soldTickets.get(ticket.route).get(ticket.tid);
+        if (soldTickets[ticket.route].containsKey(ticket.tid)) {
+            Ticket soldTicket = soldTickets[ticket.route].get(ticket.tid);
             if (soldTicket == null) {
                 System.out.println("Cannot match any sold tickets!");
                 TicketUtility.printTicket(ticket);
@@ -91,9 +106,13 @@ public class TicketingDS implements TicketingSystem {
                 TicketUtility.printTicket(ticket);
                 TicketUtility.printTicket(soldTicket);
             } else {
-                routeStatus[ticket.route].cancel(ticket.departure, ticket.arrival);
-                soldTickets.get(ticket.route).remove(soldTicket.tid);
-                return true;
+                soldTickets[soldTicket.route].remove(soldTicket.tid);
+                for (int s = 0; s < routeCapacity; ++s) {
+                    if (seatStatus[ticket.route][s].tryFree(ticket.departure, ticket.arrival)) {
+                        return true;
+                    }
+                }
+                return false;
             }
         }
         return false;
