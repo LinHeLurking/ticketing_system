@@ -1,7 +1,6 @@
 package ticketingsystem;
 
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class TicketingDS implements TicketingSystem {
@@ -9,7 +8,8 @@ public class TicketingDS implements TicketingSystem {
 
     private final ConcurrentHashMap<Long, Ticket>[] soldTickets;
     private final ConcurrentInterval[][] seatStatus;
-    private final AtomicLong[] ticketIdCounter;
+    //    private final AtomicLong[] ticketIdCounter;
+    private final ThreadLocal<Integer>[] ticketIdCounter;
 
     public TicketingDS(int routeNum, int coachNum, int seatNumPerCoach, int stationNum, int threadNum) {
         // Verify parameters
@@ -31,9 +31,19 @@ public class TicketingDS implements TicketingSystem {
             this.soldTickets[i] = new ConcurrentHashMap<>();
         }
 
-        ticketIdCounter = new AtomicLong[routeNum + 1];
+//        ticketIdCounter = new AtomicLong[routeNum + 1];
+//        for (int r = 1; r <= routeNum; ++r) {
+//            ticketIdCounter[r] = new AtomicLong(r);
+//        }
+        ticketIdCounter = new ThreadLocal[routeNum + 1];
         for (int r = 1; r <= routeNum; ++r) {
-            ticketIdCounter[r] = new AtomicLong(r);
+            int finalR = r;
+            ticketIdCounter[r] = new ThreadLocal<Integer>() {
+                @Override
+                protected Integer initialValue() {
+                    return (int) (finalR * threadNum + Thread.currentThread().getId() % threadNum);
+                }
+            };
         }
 
         seatStatus = new ConcurrentInterval[routeNum + 1][];
@@ -53,10 +63,11 @@ public class TicketingDS implements TicketingSystem {
     }
 
     private long getUniqueTicketId(int route) {
-        return ticketIdCounter[route].getAndAdd(routeNum);
+        int oldVal = ticketIdCounter[route].get();
+        int newVal = oldVal + routeNum * threadNum;
+        ticketIdCounter[route].set(newVal);
+        return oldVal;
     }
-
-//    public ArrayList<Integer> reservedSeats()
 
     @Override
     public Ticket buyTicket(String passenger, int route, int departure, int arrival) {
