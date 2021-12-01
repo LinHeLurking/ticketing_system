@@ -63,9 +63,7 @@ public class TicketingDS implements TicketingSystem {
         if (invalidParameter(route, departure, arrival)) {
             throw new RuntimeException("Invalid purchase parameter!");
         }
-//        RandomTraverse order = new RandomTraverse(routeCapacity);
         for (int s = 0; s < routeCapacity; ++s) {
-//            int j = order.next();
             if (seatStatus[route][s].tryReserve(departure, arrival)) {
                 long tid = getUniqueTicketId(route);
                 int coachId = 1 + s / seatNumPerCoach;
@@ -85,8 +83,9 @@ public class TicketingDS implements TicketingSystem {
             throw new RuntimeException("Invalid inquiry parameter!");
         }
         int remain = 0;
+        RandomTraverse order = new RandomTraverse(routeCapacity);
         for (int s = 0; s < routeCapacity; ++s) {
-            if (seatStatus[route][s].isAvailable(departure, arrival)) {
+            if (seatStatus[route][order.next()].isAvailable(departure, arrival)) {
                 remain++;
             }
         }

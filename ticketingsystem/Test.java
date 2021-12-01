@@ -9,37 +9,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
-public class Test {
+class TestUtility {
+    public static final int BUY = 0, REFUND = 1, QUERY = 2;
 
-    protected static final int BUY = 0, REFUND = 1, QUERY = 2;
-
-    private static void testRandomTraverse() {
-        int repeatTimes = 10000;
-        boolean flag = true;
-        for (int rd = 0; rd < repeatTimes && flag; ++rd) {
-            int n = ThreadLocalRandom.current().nextInt(1000);
-            ArrayList<Integer> arr = new ArrayList<>();
-            RandomTraverse order = new RandomTraverse(n);
-            for (int i = 0; i < n; ++i) {
-                arr.add(order.next());
-            }
-            Collections.sort(arr);
-
-            for (int i = 0; i < n && flag; ++i) {
-                flag = (i == arr.get(i));
-            }
-
-        }
-        if (flag) {
-            System.out.println("Correct random traverse!\n");
-        } else {
-            System.out.println("Incorrect random traverse!\n");
-        }
-    }
-
-    private static int getRandomOpType(Random random) {
+    public static int getRandomOpType() {
         int opType;
-        int rV = random.nextInt(100);
+        int rV = ThreadLocalRandom.current().nextInt(100);
         if (rV < 20) {
             opType = BUY;
         } else if (rV < 30) {
@@ -49,6 +24,10 @@ public class Test {
         }
         return opType;
     }
+}
+
+class CorrectnessTest {
+
 
     private static boolean singleThreadTest(TicketingSystem systemA, TicketingSystem systemB,
                                             int checkTimes, int routeNum, int stationNum, boolean ignoreError) {
@@ -57,7 +36,7 @@ public class Test {
         long threadId = Thread.currentThread().getId();
         LinkedList<Ticket> aBought = new LinkedList<>(), bBought = new LinkedList<>();
         for (int i = 0; i < checkTimes && (flag); ++i) {
-            int opType = getRandomOpType(random);
+            int opType = TestUtility.getRandomOpType();
             String passengerName = "TEST_USER";
             int route = random.nextInt(routeNum) + 1;
             int departure = random.nextInt(stationNum) + 1;
@@ -71,7 +50,7 @@ public class Test {
                 departure = tmp;
             }
             switch (opType) {
-                case BUY:
+                case TestUtility.BUY:
                     Ticket ticketA = systemA.buyTicket(passengerName, route, departure, arrival);
                     Ticket ticketB = systemB.buyTicket(passengerName, route, departure, arrival);
                     if (ticketA != null && ticketB != null) {
@@ -99,7 +78,7 @@ public class Test {
                                 threadId, systemA.inquiry(route, departure, arrival), systemB.inquiry(route, departure, arrival));
                     }
                     break;
-                case REFUND:
+                case TestUtility.REFUND:
                     if (!aBought.isEmpty() && !bBought.isEmpty()) {
                         int ind = random.nextInt(aBought.size());
                         Ticket ticketABought = aBought.get(ind);
@@ -123,7 +102,7 @@ public class Test {
                         }
                     }
                     break;
-                case QUERY:
+                case TestUtility.QUERY:
                     int aResult = systemA.inquiry(route, departure, arrival);
                     int bResult = systemB.inquiry(route, departure, arrival);
                     flag = (aResult == bResult) || ignoreError;
@@ -199,7 +178,7 @@ public class Test {
         return flag;
     }
 
-    private static void testSequential(int routeNum, int coachNum, int seatNum, int stationNum, int threadNum) {
+    public static void testSequential(int routeNum, int coachNum, int seatNum, int stationNum, int threadNum) {
         TicketingSystem naiveDS;
         final LinkedList<TicketingSystem> systems = new LinkedList<>();
         systems.add(new TicketingDS(routeNum, coachNum, seatNum, stationNum, threadNum));
@@ -221,7 +200,7 @@ public class Test {
         }
     }
 
-    private static void testConcurrent(int routeNum, int coachNum, int seatNum, int stationNum, int threadNum)
+    public static void testConcurrent(int routeNum, int coachNum, int seatNum, int stationNum, int threadNum)
             throws InterruptedException {
         TicketingSystem naiveDS;
         final LinkedList<TicketingSystem> systems = new LinkedList<>();
@@ -243,12 +222,48 @@ public class Test {
             }
         }
     }
+}
 
+class MiscellaneousTest {
+    public static void testRandomTraverse() {
+        int repeatTimes = 10000;
+        boolean flag = true;
+        for (int rd = 0; rd < repeatTimes && flag; ++rd) {
+            int n = ThreadLocalRandom.current().nextInt(1000);
+            ArrayList<Integer> arr = new ArrayList<>();
+            RandomTraverse order = new RandomTraverse(n);
+            for (int i = 0; i < n; ++i) {
+                arr.add(order.next());
+            }
+            Collections.sort(arr);
+
+            for (int i = 0; i < n && flag; ++i) {
+                flag = (i == arr.get(i));
+            }
+
+        }
+        if (flag) {
+            System.out.println("Correct random traverse!\n");
+        } else {
+            System.out.println("Incorrect random traverse!\n");
+        }
+    }
+}
+
+class PerformanceTest {
+
+//    private static void
+
+    public static void testPerformance(int routeNum, int coachNum, int seatNum, int stationNum, int threadNum) {
+    }
+}
+
+public class Test {
     public static void main(String[] args) throws InterruptedException {
-        testRandomTraverse();
+        MiscellaneousTest.testRandomTraverse();
 
         int routeNum = 10, coachNum = 10, seatNum = 100, stationNum = 20, threadNum = 6;
-        testSequential(routeNum, coachNum, seatNum, stationNum, threadNum);
-        testConcurrent(routeNum, coachNum, seatNum, stationNum, threadNum);
+        CorrectnessTest.testSequential(routeNum, coachNum, seatNum, stationNum, threadNum);
+        CorrectnessTest.testConcurrent(routeNum, coachNum, seatNum, stationNum, threadNum);
     }
 }
