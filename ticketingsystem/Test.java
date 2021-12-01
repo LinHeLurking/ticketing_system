@@ -234,7 +234,7 @@ class CorrectnessTest {
 
 class MiscellaneousTest {
     public static void testRandomTraverse() {
-        System.out.println("Testing random traverse helper function.");
+        System.out.println("Testing random traverse helper function...");
         int repeatTimes = 100000;
         boolean flag = true;
         for (int rd = 0; rd < repeatTimes && flag; ++rd) {
@@ -299,7 +299,7 @@ class PerformanceTest {
     }
 
     private static void testOne(TicketingSystem system, int routeNum, int stationNum, int threadNum, int repeatTimes) throws InterruptedException {
-        System.out.format("Starting test for %s with %d thread(s).\n",
+        System.out.format("Starting test for %s with %d thread(s)...\n",
                 system.getClass().getSimpleName(), threadNum);
         ExecutorService executor = Executors.newFixedThreadPool(threadNum);
         long start = System.nanoTime();
