@@ -24,11 +24,25 @@ class TestUtility {
         }
         return opType;
     }
+
+    public static int[] getRandomConfig(int routeNum, int stationNum) {
+        Random random = ThreadLocalRandom.current();
+        int route = random.nextInt(routeNum) + 1;
+        int departure = random.nextInt(stationNum) + 1;
+        int arrival = random.nextInt(stationNum) + 1;
+        while (arrival == departure) {
+            arrival = random.nextInt(stationNum) + 1;
+        }
+        if (arrival < departure) {
+            int tmp = arrival;
+            arrival = departure;
+            departure = tmp;
+        }
+        return new int[]{route, departure, arrival};
+    }
 }
 
 class CorrectnessTest {
-
-
     private static boolean singleThreadTest(TicketingSystem systemA, TicketingSystem systemB,
                                             int checkTimes, int routeNum, int stationNum, boolean ignoreError) {
         Random random = new Random();
@@ -38,17 +52,11 @@ class CorrectnessTest {
         for (int i = 0; i < checkTimes && (flag); ++i) {
             int opType = TestUtility.getRandomOpType();
             String passengerName = "TEST_USER";
-            int route = random.nextInt(routeNum) + 1;
-            int departure = random.nextInt(stationNum) + 1;
-            int arrival = random.nextInt(stationNum) + 1;
-            while (arrival == departure) {
-                arrival = random.nextInt(stationNum) + 1;
-            }
-            if (arrival < departure) {
-                int tmp = arrival;
-                arrival = departure;
-                departure = tmp;
-            }
+            int[] config = TestUtility.getRandomConfig(routeNum, stationNum);
+            int route, departure, arrival;
+            route = config[0];
+            departure = config[1];
+            arrival = config[2];
             switch (opType) {
                 case TestUtility.BUY:
                     Ticket ticketA = systemA.buyTicket(passengerName, route, departure, arrival);
@@ -251,10 +259,77 @@ class MiscellaneousTest {
 }
 
 class PerformanceTest {
+    private static void singleThreadTask(TicketingSystem system, int routeNum, int stationNum, int repeatTimes) {
+        Random random = new Random();
+        ArrayList<Ticket> boughtTickets = new ArrayList<>();
+        for (int rd = 0; rd < repeatTimes; ++rd) {
+            int[] config = TestUtility.getRandomConfig(routeNum, stationNum);
+            int route, departure, arrival;
+            route = config[0];
+            departure = config[1];
+            arrival = config[2];
+            String passengerName = "PERF_USER";
 
-//    private static void
+            int opType = TestUtility.getRandomOpType();
+            switch (opType) {
+                case TestUtility.BUY: {
+                    Ticket ticket = system.buyTicket(passengerName, route, departure, arrival);
+                    if (ticket != null) {
+                        boughtTickets.add(ticket);
+                    }
+                    break;
+                }
+                case TestUtility.QUERY: {
+                    system.inquiry(route, departure, arrival);
+                    break;
+                }
+                case TestUtility.REFUND: {
+                    if (!boughtTickets.isEmpty()) {
+                        int id = random.nextInt(boughtTickets.size());
+                        Ticket ticket = boughtTickets.get(id);
+                        boughtTickets.remove(id);
+                        system.refundTicket(ticket);
+                    }
+                    break;
+                }
+                default: // Impossible!
+                    break;
+            }
+        }
+    }
 
-    public static void testPerformance(int routeNum, int coachNum, int seatNum, int stationNum, int threadNum) {
+    private static void testOne(TicketingSystem system, int routeNum, int stationNum, int threadNum, int repeatTimes) throws InterruptedException {
+        System.out.format("Starting test for %s with %d thread(s).\n",
+                system.getClass().getSimpleName(), threadNum);
+        ExecutorService executor = Executors.newFixedThreadPool(threadNum);
+        long start = System.nanoTime();
+        for (int i = 0; i < threadNum; ++i) {
+            executor.submit(() -> {
+                singleThreadTask(system, routeNum, stationNum, repeatTimes);
+            });
+        }
+        executor.shutdown();
+        if (executor.awaitTermination(60, TimeUnit.SECONDS)) {
+            long end = System.nanoTime();
+            double throughput = (double) (threadNum * repeatTimes) / ((double) (end - start) / 1000 / 1000);
+            System.out.println("Test finished.");
+            System.out.format("Throughput: %f op/ms.\n\n", throughput);
+        } else {
+            System.out.format("Timeout while waiting for %s to finish performance test.\n",
+                    system.getClass().getSimpleName());
+        }
+    }
+
+    private static void testAll(int routeNum, int coachNum, int seatNum, int stationNum, int threadNum) throws InterruptedException {
+        TicketingSystem nTds = new NaiveTicketSystem(routeNum, coachNum, seatNum, stationNum, threadNum);
+        TicketingSystem tds = new TicketingDS(routeNum, coachNum, seatNum, stationNum, threadNum);
+        int repeatTimes = 1000000;
+        testOne(nTds, routeNum, stationNum, threadNum, repeatTimes);
+        testOne(tds, routeNum, stationNum, threadNum, repeatTimes);
+    }
+
+    public static void testPerformance(int routeNum, int coachNum, int seatNum, int stationNum, int threadNum) throws InterruptedException {
+        testAll(routeNum, coachNum, seatNum, stationNum, threadNum);
     }
 }
 
@@ -265,5 +340,7 @@ public class Test {
         int routeNum = 10, coachNum = 10, seatNum = 100, stationNum = 20, threadNum = 6;
         CorrectnessTest.testSequential(routeNum, coachNum, seatNum, stationNum, threadNum);
         CorrectnessTest.testConcurrent(routeNum, coachNum, seatNum, stationNum, threadNum);
+
+        PerformanceTest.testPerformance(routeNum, coachNum, seatNum, stationNum, threadNum);
     }
 }
