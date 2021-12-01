@@ -234,7 +234,8 @@ class CorrectnessTest {
 
 class MiscellaneousTest {
     public static void testRandomTraverse() {
-        int repeatTimes = 10000;
+        System.out.println("Testing random traverse helper function.");
+        int repeatTimes = 100000;
         boolean flag = true;
         for (int rd = 0; rd < repeatTimes && flag; ++rd) {
             int n = ThreadLocalRandom.current().nextInt(1000);
@@ -248,7 +249,6 @@ class MiscellaneousTest {
             for (int i = 0; i < n && flag; ++i) {
                 flag = (i == arr.get(i));
             }
-
         }
         if (flag) {
             System.out.println("Correct random traverse!\n");
@@ -304,9 +304,7 @@ class PerformanceTest {
         ExecutorService executor = Executors.newFixedThreadPool(threadNum);
         long start = System.nanoTime();
         for (int i = 0; i < threadNum; ++i) {
-            executor.submit(() -> {
-                singleThreadTask(system, routeNum, stationNum, repeatTimes);
-            });
+            executor.submit(() -> singleThreadTask(system, routeNum, stationNum, repeatTimes));
         }
         executor.shutdown();
         if (executor.awaitTermination(60, TimeUnit.SECONDS)) {
