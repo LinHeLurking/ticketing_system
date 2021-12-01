@@ -8,7 +8,7 @@ public class TicketingDS implements TicketingSystem {
 
     private final ConcurrentHashMap<Long, Ticket>[] soldTickets;
     private final ConcurrentInterval[][] seatStatus;
-    //    private final AtomicLong[] ticketIdCounter;
+    //        private final AtomicLong[] ticketIdCounter;
     private final ThreadLocal<Integer>[] ticketIdCounter;
 
     public TicketingDS(int routeNum, int coachNum, int seatNumPerCoach, int stationNum, int threadNum) {
@@ -63,6 +63,7 @@ public class TicketingDS implements TicketingSystem {
     }
 
     private long getUniqueTicketId(int route) {
+//        return ticketIdCounter[route].getAndIncrement();
         int oldVal = ticketIdCounter[route].get();
         int newVal = oldVal + routeNum * threadNum;
         ticketIdCounter[route].set(newVal);
