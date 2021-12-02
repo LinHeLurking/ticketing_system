@@ -296,7 +296,7 @@ class PerformanceTest {
         TicketingSystem nTds = new NaiveTicketSystem(routeNum, coachNum, seatNum, stationNum, threadNum);
         TicketingSystem tds = new TicketingDS(routeNum, coachNum, seatNum, stationNum, threadNum);
         int repeatTimes = 1000000;
-        testOne(nTds, routeNum, stationNum, threadNum, repeatTimes);
+//        testOne(nTds, routeNum, stationNum, threadNum, repeatTimes);
         testOne(tds, routeNum, stationNum, threadNum, repeatTimes);
     }
 
@@ -317,8 +317,8 @@ public class Test {
             }
         }
 
-        CorrectnessTest.testSequential(routeNum, coachNum, seatNum, stationNum, threadNum);
-        CorrectnessTest.testConcurrent(routeNum, coachNum, seatNum, stationNum, threadNum);
+//        CorrectnessTest.testSequential(routeNum, coachNum, seatNum, stationNum, threadNum);
+//        CorrectnessTest.testConcurrent(routeNum, coachNum, seatNum, stationNum, threadNum);
 
         PerformanceTest.testPerformance(routeNum, coachNum, seatNum, stationNum, threadNum);
     }
