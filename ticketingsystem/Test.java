@@ -131,7 +131,7 @@ class CorrectnessTest {
     private static boolean compareTicketSystemConcurrent(TicketingSystem systemA, TicketingSystem systemB, int checkTimes,
                                                          int threadNum, int routeNum, int stationNum)
             throws InterruptedException {
-        System.out.println("Testing concurrent correctness...");
+        System.out.format("Testing concurrent correctness with %d thread(s)...\n", threadNum);
         System.out.format("A = %s\n", systemA.getClass().getSimpleName());
         System.out.format("B = %s\n", systemB.getClass().getSimpleName());
 
