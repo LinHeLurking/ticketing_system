@@ -82,11 +82,8 @@ public class TicketingDS implements TicketingSystem {
             throw new RuntimeException("Invalid inquiry parameter!");
         }
         int remain = 0;
-        int start = random.nextInt(routeCapacity);
         for (int s = 0; s < routeCapacity; ++s) {
-            int pos = start + s;
-            pos = pos >= routeCapacity ? pos - routeCapacity : pos;
-            if (seatStatus[route][pos].isAvailable(departure, arrival)) {
+            if (seatStatus[route][s].isAvailable(departure, arrival)) {
                 remain++;
             }
         }
@@ -107,14 +104,11 @@ public class TicketingDS implements TicketingSystem {
                 System.out.println("Not the same with already sold ticket!");
                 TicketUtility.printTicket(ticket);
                 TicketUtility.printTicket(soldTicket);
+            } else if (soldTickets[soldTicket.route].remove(soldTicket.tid) != null) {
+                int s = (soldTicket.coach - 1) * seatNumPerCoach + (soldTicket.seat - 1);
+                return seatStatus[soldTicket.route][s].tryFree(soldTicket.departure, soldTicket.arrival);
             } else {
-                Ticket removed = soldTickets[soldTicket.route].remove(soldTicket.tid);
-                if (removed != null) {
-                    int s = (soldTicket.coach - 1) * seatNumPerCoach + (soldTicket.seat - 1);
-                    return seatStatus[soldTicket.route][s].tryFree(soldTicket.departure, soldTicket.arrival);
-                } else {
-                    return false;
-                }
+                return false;
             }
         }
         return false;
