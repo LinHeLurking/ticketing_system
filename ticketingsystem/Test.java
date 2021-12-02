@@ -308,6 +308,15 @@ class PerformanceTest {
 public class Test {
     public static void main(String[] args) throws InterruptedException {
         int routeNum = 10, coachNum = 10, seatNum = 100, stationNum = 20, threadNum = 6;
+
+        if (args.length == 1) {
+            try {
+                threadNum = Integer.parseInt(args[0]);
+            } catch (Exception ignored) {
+
+            }
+        }
+
         CorrectnessTest.testSequential(routeNum, coachNum, seatNum, stationNum, threadNum);
         CorrectnessTest.testConcurrent(routeNum, coachNum, seatNum, stationNum, threadNum);
 
