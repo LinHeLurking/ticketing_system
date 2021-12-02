@@ -30,7 +30,6 @@ public class ConcurrentInterval {
 
     synchronized public boolean tryFree(int beginInclusive, int endExclusive) {
         long mask = ((1L << endExclusive) - 1L) ^ ((1L << beginInclusive) - 1L);
-
         if ((bitmap & mask) == mask) {
             bitmap ^= mask;
             return true;

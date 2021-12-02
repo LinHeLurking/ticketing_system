@@ -1,6 +1,9 @@
 package ticketingsystem;
 
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class TicketingDS implements TicketingSystem {
@@ -8,8 +11,8 @@ public class TicketingDS implements TicketingSystem {
 
     private final ConcurrentHashMap<Long, Ticket>[] soldTickets;
     private final ConcurrentInterval[][] seatStatus;
-    //        private final AtomicLong[] ticketIdCounter;
-    private final ThreadLocal<Integer>[] ticketIdCounter;
+    private final AtomicLong[] ticketIdCounter;
+    private final Random random;
 
     public TicketingDS(int routeNum, int coachNum, int seatNumPerCoach, int stationNum, int threadNum) {
         // Verify parameters
@@ -31,20 +34,12 @@ public class TicketingDS implements TicketingSystem {
             this.soldTickets[i] = new ConcurrentHashMap<>();
         }
 
-//        ticketIdCounter = new AtomicLong[routeNum + 1];
-//        for (int r = 1; r <= routeNum; ++r) {
-//            ticketIdCounter[r] = new AtomicLong(r);
-//        }
-        ticketIdCounter = new ThreadLocal[routeNum + 1];
+        ticketIdCounter = new AtomicLong[routeNum + 1];
         for (int r = 1; r <= routeNum; ++r) {
-            int finalR = r;
-            ticketIdCounter[r] = new ThreadLocal<Integer>() {
-                @Override
-                protected Integer initialValue() {
-                    return (int) (finalR * threadNum + Thread.currentThread().getId() % threadNum);
-                }
-            };
+            ticketIdCounter[r] = new AtomicLong(r);
         }
+
+        random = new Random();
 
         seatStatus = new ConcurrentInterval[routeNum + 1][];
         for (int r = 1; r <= routeNum; ++r) {
@@ -63,11 +58,7 @@ public class TicketingDS implements TicketingSystem {
     }
 
     private long getUniqueTicketId(int route) {
-//        return ticketIdCounter[route].getAndIncrement();
-        int oldVal = ticketIdCounter[route].get();
-        int newVal = oldVal + routeNum * threadNum;
-        ticketIdCounter[route].set(newVal);
-        return oldVal;
+        return ticketIdCounter[route].getAndAdd(routeNum);
     }
 
     @Override
@@ -95,9 +86,11 @@ public class TicketingDS implements TicketingSystem {
             throw new RuntimeException("Invalid inquiry parameter!");
         }
         int remain = 0;
-        RandomTraverse order = new RandomTraverse(routeCapacity);
+        int start = random.nextInt(routeCapacity);
         for (int s = 0; s < routeCapacity; ++s) {
-            if (seatStatus[route][order.next()].isAvailable(departure, arrival)) {
+            int pos = start + s;
+            pos = pos >= routeCapacity ? pos - routeCapacity : pos;
+            if (seatStatus[route][pos].isAvailable(departure, arrival)) {
                 remain++;
             }
         }
@@ -112,19 +105,20 @@ public class TicketingDS implements TicketingSystem {
         if (soldTickets[ticket.route].containsKey(ticket.tid)) {
             Ticket soldTicket = soldTickets[ticket.route].get(ticket.tid);
             if (soldTicket == null) {
-                System.out.println("Cannot match any sold tickets!");
-                TicketUtility.printTicket(ticket);
+                // Someone has already refunded!
+                return false;
             } else if (!TicketUtility.isSameTicket(ticket, soldTicket, true)) {
                 System.out.println("Not the same with already sold ticket!");
                 TicketUtility.printTicket(ticket);
                 TicketUtility.printTicket(soldTicket);
             } else {
-                int s = (soldTicket.coach - 1) * seatNumPerCoach + (soldTicket.seat - 1);
-                if (!seatStatus[soldTicket.route][s].tryFree(soldTicket.departure, soldTicket.arrival)) {
+                Ticket removed = soldTickets[soldTicket.route].remove(soldTicket.tid);
+                if (removed != null) {
+                    int s = (soldTicket.coach - 1) * seatNumPerCoach + (soldTicket.seat - 1);
+                    return seatStatus[soldTicket.route][s].tryFree(soldTicket.departure, soldTicket.arrival);
+                } else {
                     return false;
                 }
-                soldTickets[soldTicket.route].remove(soldTicket.tid);
-                return true;
             }
         }
         return false;
