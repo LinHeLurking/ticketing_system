@@ -232,32 +232,6 @@ class CorrectnessTest {
     }
 }
 
-class MiscellaneousTest {
-    public static void testRandomTraverse() {
-        System.out.println("Testing random traverse helper function...");
-        int repeatTimes = 100000;
-        boolean flag = true;
-        for (int rd = 0; rd < repeatTimes && flag; ++rd) {
-            int n = ThreadLocalRandom.current().nextInt(1000);
-            ArrayList<Integer> arr = new ArrayList<>();
-            RandomTraverse order = new RandomTraverse(n);
-            for (int i = 0; i < n; ++i) {
-                arr.add(order.next());
-            }
-            Collections.sort(arr);
-
-            for (int i = 0; i < n && flag; ++i) {
-                flag = (i == arr.get(i));
-            }
-        }
-        if (flag) {
-            System.out.println("Correct random traverse!\n");
-        } else {
-            System.out.println("Incorrect random traverse!\n");
-        }
-    }
-}
-
 class PerformanceTest {
     private static void singleThreadTask(TicketingSystem system, int routeNum, int stationNum, int repeatTimes) {
         Random random = new Random();
@@ -333,8 +307,6 @@ class PerformanceTest {
 
 public class Test {
     public static void main(String[] args) throws InterruptedException {
-        MiscellaneousTest.testRandomTraverse();
-
         int routeNum = 10, coachNum = 10, seatNum = 100, stationNum = 20, threadNum = 6;
         CorrectnessTest.testSequential(routeNum, coachNum, seatNum, stationNum, threadNum);
         CorrectnessTest.testConcurrent(routeNum, coachNum, seatNum, stationNum, threadNum);

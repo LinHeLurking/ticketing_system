@@ -57,10 +57,6 @@ public class TicketingDS implements TicketingSystem {
                 departure >= arrival;
     }
 
-    private long getUniqueTicketId(int route) {
-        return ticketIdCounter[route].getAndAdd(routeNum);
-    }
-
     @Override
     public Ticket buyTicket(String passenger, int route, int departure, int arrival) {
         if (invalidParameter(route, departure, arrival)) {
@@ -68,7 +64,7 @@ public class TicketingDS implements TicketingSystem {
         }
         for (int s = 0; s < routeCapacity; ++s) {
             if (seatStatus[route][s].tryReserve(departure, arrival)) {
-                long tid = getUniqueTicketId(route);
+                long tid = ticketIdCounter[route].getAndAdd(routeNum);
                 int coachId = 1 + s / seatNumPerCoach;
                 int seatId = 1 + s % seatNumPerCoach;
                 Ticket ticket = TicketUtility.createTicket(tid, passenger, route, coachId, seatId, departure, arrival);
