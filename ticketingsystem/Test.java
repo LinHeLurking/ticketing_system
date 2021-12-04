@@ -317,8 +317,8 @@ public class Test {
             }
         }
 
-//        CorrectnessTest.testSequential(routeNum, coachNum, seatNum, stationNum, threadNum);
-//        CorrectnessTest.testConcurrent(routeNum, coachNum, seatNum, stationNum, threadNum);
+        CorrectnessTest.testSequential(routeNum, coachNum, seatNum, stationNum, threadNum);
+        CorrectnessTest.testConcurrent(routeNum, coachNum, seatNum, stationNum, threadNum);
 
         PerformanceTest.testPerformance(routeNum, coachNum, seatNum, stationNum, threadNum);
     }

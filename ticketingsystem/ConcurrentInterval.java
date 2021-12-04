@@ -1,8 +1,9 @@
 package ticketingsystem;
 
-import java.util.concurrent.TimeUnit;
+import sun.misc.Unsafe;
+
+import java.lang.reflect.Field;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 /*
  * 0-indexed concurrent interval.
@@ -19,13 +20,6 @@ public class ConcurrentInterval {
 
     public boolean tryReserve(int beginInclusive, int endExclusive) {
         int mask = ((1 << endExclusive) - 1) ^ ((1 << beginInclusive) - 1);
-        // By directly returning in if-else block, we save up a branch instruction. Maybe :)
-//        if ((bitmap & mask) == 0) {
-//            bitmap |= mask;
-//            return true;
-//        } else {
-//            return false;
-//        }
         while (true) {
             int oldVal = bitmap.get();
             if ((oldVal & mask) == 0) {
@@ -40,12 +34,6 @@ public class ConcurrentInterval {
 
     public boolean tryFree(int beginInclusive, int endExclusive) {
         int mask = ((1 << endExclusive) - 1) ^ ((1 << beginInclusive) - 1);
-//        if ((bitmap & mask) == mask) {
-//            bitmap ^= mask;
-//            return true;
-//        } else {
-//            return false;
-//        }
         while (true) {
             int oldVal = bitmap.get();
             if ((oldVal & mask) == mask) {
