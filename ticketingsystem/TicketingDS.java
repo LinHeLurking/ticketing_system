@@ -1,8 +1,5 @@
 package ticketingsystem;
 
-import sun.misc.Unsafe;
-
-import java.lang.reflect.Field;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
@@ -84,25 +81,7 @@ public class TicketingDS implements TicketingSystem {
             throw new RuntimeException("Invalid inquiry parameter!");
         }
         int remain = 0;
-
-        int a = ThreadLocalRandom.current().nextInt(routeCapacity);
-        int b = ThreadLocalRandom.current().nextInt(routeCapacity);
-        if (a > b) {
-            int tmp = a;
-            a = b;
-            b = tmp;
-        }
-        for (int s = b; s < routeCapacity; ++s) {
-            if (seatStatus[route][s].isAvailable(departure, arrival)) {
-                remain++;
-            }
-        }
-        for (int s = a; s < b; ++s) {
-            if (seatStatus[route][s].isAvailable(departure, arrival)) {
-                remain++;
-            }
-        }
-        for (int s = 0; s < a; ++s) {
+        for (int s = 0; s < routeCapacity; ++s) {
             if (seatStatus[route][s].isAvailable(departure, arrival)) {
                 remain++;
             }

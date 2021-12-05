@@ -1,7 +1,6 @@
 package ticketingsystem;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
@@ -140,7 +139,7 @@ class CorrectnessTest {
             executor.execute(() -> singleThreadTest(systemA, systemB, checkTimes, routeNum, stationNum, true));
         }
         executor.shutdown();
-        if (!executor.awaitTermination(40, TimeUnit.SECONDS)) {
+        if (!executor.awaitTermination(180, TimeUnit.SECONDS)) {
             System.out.println("Timeout when waiting concurrent tests finish.");
             return false;
         }
@@ -275,27 +274,21 @@ class PerformanceTest {
     private static void testOne(TicketingSystem system, int routeNum, int stationNum, int threadNum, int repeatTimes) throws InterruptedException {
         System.out.format("Starting test for %s with %d thread(s)...\n",
                 system.getClass().getSimpleName(), threadNum);
-        ExecutorService executor = Executors.newFixedThreadPool(threadNum);
+        Thread thread = new Thread(() -> {
+            singleThreadTask(system, routeNum, stationNum, repeatTimes);
+        });
         long start = System.nanoTime();
-        for (int i = 0; i < threadNum; ++i) {
-            executor.submit(() -> singleThreadTask(system, routeNum, stationNum, repeatTimes));
-        }
-        executor.shutdown();
-        if (executor.awaitTermination(60, TimeUnit.SECONDS)) {
-            long end = System.nanoTime();
-            double throughput = (double) (threadNum * repeatTimes) / ((double) (end - start) / 1000 / 1000);
-            System.out.println("Test finished.");
-            System.out.format("Throughput: %f op/ms.\n\n", throughput);
-        } else {
-            System.out.format("Timeout while waiting for %s to finish performance test.\n",
-                    system.getClass().getSimpleName());
-        }
+        thread.start();
+        thread.join();
+        long end = System.nanoTime();
+        double throughput = repeatTimes * threadNum / ((double) (end - start) / 1000 / 1000);
+        System.out.format("Throughput: %f op/ms\n", throughput);
     }
 
     private static void testAll(int routeNum, int coachNum, int seatNum, int stationNum, int threadNum) throws InterruptedException {
-        TicketingSystem nTds = new NaiveTicketSystem(routeNum, coachNum, seatNum, stationNum, threadNum);
+//        TicketingSystem nTds = new NaiveTicketSystem(routeNum, coachNum, seatNum, stationNum, threadNum);
         TicketingSystem tds = new TicketingDS(routeNum, coachNum, seatNum, stationNum, threadNum);
-        int repeatTimes = 1000000;
+        int repeatTimes = 100000;
 //        testOne(nTds, routeNum, stationNum, threadNum, repeatTimes);
         testOne(tds, routeNum, stationNum, threadNum, repeatTimes);
     }
@@ -313,7 +306,6 @@ public class Test {
             try {
                 threadNum = Integer.parseInt(args[0]);
             } catch (Exception ignored) {
-
             }
         }
 
