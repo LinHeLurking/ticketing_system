@@ -232,7 +232,7 @@ class CorrectnessTest {
 }
 
 class PerformanceTest {
-    private static void singleThreadTask(TicketingSystem system, int routeNum, int stationNum, int repeatTimes) {
+    private static void singleThreadPerfTask(TicketingSystem system, int routeNum, int stationNum, int repeatTimes) {
         Random random = new Random();
         ArrayList<Ticket> boughtTickets = new ArrayList<>();
         for (int rd = 0; rd < repeatTimes; ++rd) {
@@ -271,11 +271,66 @@ class PerformanceTest {
         }
     }
 
-    private static void testOne(TicketingSystem system, int routeNum, int stationNum, int threadNum, int repeatTimes) throws InterruptedException {
-        System.out.format("Starting test for %s with %d thread(s)...\n",
+    private static void singleThreadLatencyTask(TicketingSystem system, int routeNum, int stationNum, int repeatTimes) {
+        Random random = new Random();
+        ArrayList<Ticket> boughtTickets = new ArrayList<>();
+        long buyTime = 0, refundTime = 0, inquiryTime = 0;
+        long buyCount = 0, refundCount = 0, inquiryCount = 0;
+        for (int rd = 0; rd < repeatTimes; ++rd) {
+            int[] config = TestUtility.getRandomConfig(routeNum, stationNum);
+            int route, departure, arrival;
+            route = config[0];
+            departure = config[1];
+            arrival = config[2];
+            String passengerName = "PERF_USER";
+
+            int opType = TestUtility.getRandomOpType();
+            switch (opType) {
+                case TestUtility.BUY: {
+                    long start = System.nanoTime();
+                    Ticket ticket = system.buyTicket(passengerName, route, departure, arrival);
+                    long end = System.nanoTime();
+                    buyCount++;
+                    buyTime += end - start;
+                    if (ticket != null) {
+                        boughtTickets.add(ticket);
+                    }
+                    break;
+                }
+                case TestUtility.QUERY: {
+                    long start = System.nanoTime();
+                    system.inquiry(route, departure, arrival);
+                    long end = System.nanoTime();
+                    inquiryCount++;
+                    inquiryTime += end - start;
+                    break;
+                }
+                case TestUtility.REFUND: {
+                    if (!boughtTickets.isEmpty()) {
+                        int id = random.nextInt(boughtTickets.size());
+                        Ticket ticket = boughtTickets.get(id);
+                        boughtTickets.remove(id);
+                        long start = System.nanoTime();
+                        system.refundTicket(ticket);
+                        long end = System.nanoTime();
+                        refundCount++;
+                        refundTime += end - start;
+                    }
+                    break;
+                }
+                default: // Impossible!
+                    break;
+            }
+        }
+        System.out.format("Latency: buy = %f us, refund = %f us, inquiry = %f us\n",
+                (double) buyTime / 1000 / buyCount, (double) refundTime / 1000 / refundCount, (double) inquiryTime / 1000 / inquiryCount);
+    }
+
+    private static void testThroughputOne(TicketingSystem system, int routeNum, int stationNum, int threadNum, int repeatTimes) throws InterruptedException {
+        System.out.format("Starting test throughput for %s with %d thread(s)...\n",
                 system.getClass().getSimpleName(), threadNum);
         Thread thread = new Thread(() -> {
-            singleThreadTask(system, routeNum, stationNum, repeatTimes);
+            singleThreadPerfTask(system, routeNum, stationNum, repeatTimes);
         });
         long start = System.nanoTime();
         thread.start();
@@ -285,12 +340,25 @@ class PerformanceTest {
         System.out.format("Throughput: %f op/ms\n", throughput);
     }
 
+    private static void testLatencyOne(TicketingSystem system, int routeNum, int stationNum, int threadNum, int repeatTimes) throws InterruptedException {
+        System.out.format("Starting test latency for %s with %d thread(s)...\n",
+                system.getClass().getSimpleName(), threadNum);
+        Thread thread = new Thread(() -> {
+            singleThreadLatencyTask(system, routeNum, stationNum, repeatTimes);
+        });
+        long start = System.nanoTime();
+        thread.start();
+        thread.join();
+        long end = System.nanoTime();
+        double throughput = repeatTimes * threadNum / ((double) (end - start) / 1000 / 1000);
+    }
+
     private static void testAll(int routeNum, int coachNum, int seatNum, int stationNum, int threadNum) throws InterruptedException {
-//        TicketingSystem nTds = new NaiveTicketSystem(routeNum, coachNum, seatNum, stationNum, threadNum);
         TicketingSystem tds = new TicketingDS(routeNum, coachNum, seatNum, stationNum, threadNum);
         int repeatTimes = 100000;
-//        testOne(nTds, routeNum, stationNum, threadNum, repeatTimes);
-        testOne(tds, routeNum, stationNum, threadNum, repeatTimes);
+        testThroughputOne(tds, routeNum, stationNum, threadNum, repeatTimes);
+        tds = new TicketingDS(routeNum, coachNum, seatNum, stationNum, threadNum);
+        testLatencyOne(tds, routeNum, stationNum, threadNum, repeatTimes);
     }
 
     public static void testPerformance(int routeNum, int coachNum, int seatNum, int stationNum, int threadNum) throws InterruptedException {
